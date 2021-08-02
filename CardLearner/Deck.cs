@@ -17,7 +17,7 @@ namespace CardLearner
 		[JsonInclude]
 		public int NumDone = 0;
 		[JsonInclude]
-		private List<Card> mCards = new List<Card>();
+		public List<Card> Cards { get; private set; } = new List<Card>();
 
 		public Deck()
 		{
@@ -30,7 +30,7 @@ namespace CardLearner
 			{
 				foreach (JsonElement card in doc.RootElement.GetProperty("Cards").EnumerateArray())
 				{
-					mCards.Add(JsonSerializer.Deserialize<Card>(card.GetRawText()));
+					Cards.Add(JsonSerializer.Deserialize<Card>(card.GetRawText()));
 				}
 			}
 		}
@@ -42,7 +42,7 @@ namespace CardLearner
 		public List<Card> GetCardsToStudy()
 		{
 			List<Card> cardsToStudy = new List<Card>();
-			foreach (Card card in mCards)
+			foreach (Card card in Cards)
 			{
 				if (card.NextReviewDate <= DateTime.Now)
 					cardsToStudy.Add(card);
@@ -59,7 +59,7 @@ namespace CardLearner
 					NumAgain = NumAgain,
 					NumTodo = NumTodo,
 					NumDone = NumDone,
-					Cards = mCards,
+					Cards = Cards,
 				};
 			string serializedStr = JsonSerializer.Serialize(data, options);
 
@@ -71,13 +71,13 @@ namespace CardLearner
 
 		public void ResetProgress()
 		{
-			foreach (Card card in mCards)
+			foreach (Card card in Cards)
 				card.ResetProgress();
 		}
 
 		public IEnumerator GetEnumerator()
 		{
-			return mCards.GetEnumerator();
+			return Cards.GetEnumerator();
 		}
 
 		public override string ToString()
@@ -93,12 +93,12 @@ namespace CardLearner
 
 		private Card GetValue(int index)
 		{
-			return mCards[index];
+			return Cards[index];
 		}
 
 		private void SetValue(int index, Card value)
 		{
-			mCards[index] = value;
+			Cards[index] = value;
 		}
 	}
 }

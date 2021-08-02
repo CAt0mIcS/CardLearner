@@ -20,6 +20,11 @@ namespace CardLearner
 		public const int UserGradeEasy = 5;
 
 		/// <summary>
+		/// Specifies if the next review time should be recalculated and updated (true in normal study, false in custom study)
+		/// </summary>
+		private bool mUpdateTimes = true;
+
+		/// <summary>
 		/// Specifies how far the close button is away from the right window border
 		/// and the free distance between the minimize and close button.
 		/// </summary>
@@ -180,24 +185,31 @@ namespace CardLearner
 			List<Card> cardsToStudy = deck.GetCardsToStudy();
 			if (cardsToStudy.Count == 0)
 			{
-				// CL_TODO: Message and custom study
+				DialogResult result = MessageBox.Show("Nothing to study for now. Do you want to review all cards in this deck? The time to the next review will only be changed if you answer incorrectly (Again/Hard)",
+					"Deck unavailable", MessageBoxButtons.YesNo);
+				if (result == DialogResult.Yes)
+				{
+					// CL_TODO: Fix custom study session
+					mUpdateTimes = false;
+					foreach (Card card in deck.Cards)
+						cardsToStudy.Add(card);
+				}
+				else
+					return;
 			}
-			else
-			{
-				pnlViews.Hide();
-				btnViews.Text = "<<";
-				btnViews.BackgroundImage = null;
-				mSelectedDeck = null;
-				lstviewPracticeCards.Visible = false;
-				txtFront.Visible = true;
-				txtBack.Visible = true;
-				btnSolve.Visible = true;
-				txtBack.Text = "";
+			pnlViews.Hide();
+			btnViews.Text = "<<";
+			btnViews.BackgroundImage = null;
+			mSelectedDeck = null;
+			lstviewPracticeCards.Visible = false;
+			txtFront.Visible = true;
+			txtBack.Visible = true;
+			btnSolve.Visible = true;
+			txtBack.Text = "";
 
-				Shuffle(cardsToStudy);
-				txtFront.Text = cardsToStudy[0].Front;
-				mCurrentStudyCards = cardsToStudy;
-			}
+			Shuffle(cardsToStudy);
+			txtFront.Text = cardsToStudy[0].Front;
+			mCurrentStudyCards = cardsToStudy;
 		}
 
 		private void UnloadPracticeWindow()
@@ -215,6 +227,7 @@ namespace CardLearner
 			btnGood.Visible = false;
 			btnEasy.Visible = false;
 			btnSolve.Text = "Solve";
+			mUpdateTimes = true;
 		}
 
 		private void lstviewPracticeCards_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
@@ -331,7 +344,7 @@ namespace CardLearner
 
 		private static float CalculateEasinessFactor(Card card, int userGrade)
 		{
-			return card.EasinessFactor + (0.1f - (5 - userGrade) * (0.08f + (5 - userGrade) * 0.02f));
+			return card.EasinessFactor + (0.1f - (5 - userGrade) * (0.08f + (5 - userGrade) * 0.02f)); //default
 		}
 
 		private static float CalculateInterRepetitionInterval(int userGrade, Card card, float easinessFactor = float.MaxValue)
@@ -352,14 +365,13 @@ namespace CardLearner
 			switch (userGrade)
 			{
 				case UserGradeEasy:
-					// default: 1, default: 6
-					return getInterRepetitionInterval(4.0f, 4.0f); //4d
+					return getInterRepetitionInterval(1.0f, 4.0f); //4d
 				case UserGradeGood:
 					return getInterRepetitionInterval(6.944444444444444e-3f, 1.0f); // 10min - 1d
 				case UserGradeHard:
-					return getInterRepetitionInterval(0.0041666666666666f, 6.944444444444444e-3f); // 6min - 10min
+					return getInterRepetitionInterval(0.0041666666666666f, 0.0041666666666666f); // 6min - 10min
 				case UserGradeAgain:
-					return getInterRepetitionInterval(6.944444444444444e-4f, 6.944444444444444e-4f); // 1min - 1min
+					return 6.944444444444444e-4f; // 1min
 			}
 			throw new ArgumentException("userGrade " + userGrade + " is invalid.");
 		}
@@ -367,7 +379,7 @@ namespace CardLearner
 		private static void SuperMemoAlgorithm(int userGrade, Card card)
 		{
 			// Correct response
-			if (userGrade >= UserGradeHard)
+			if (userGrade >= 3)
 			{
 				card.InterRepetitionInterval = CalculateInterRepetitionInterval(userGrade, card);
 				card.EasinessFactor = CalculateEasinessFactor(card, userGrade);
@@ -388,7 +400,7 @@ namespace CardLearner
 		{
 			mCurrentStudyCards[0].ReviewDate = DateTime.Now;
 
-			if (deletePrevious)
+			if (deletePrevious && mCurrentStudyCards[0].SuccessfulRepetitions >= 2)
 				mCurrentStudyCards.RemoveAt(0);
 			else
 			{
@@ -422,18 +434,20 @@ namespace CardLearner
 		private void btnHard_Click(object sender, EventArgs e)
 		{
 			SuperMemoAlgorithm(UserGradeHard, mCurrentStudyCards[0]);
-			LoadNextCard(true);
+			LoadNextCard(false);
 		}
 
 		private void btnGood_Click(object sender, EventArgs e)
 		{
-			SuperMemoAlgorithm(UserGradeGood, mCurrentStudyCards[0]);
+			if (mUpdateTimes)
+				SuperMemoAlgorithm(UserGradeGood, mCurrentStudyCards[0]);
 			LoadNextCard(true);
 		}
 
 		private void btnEasy_Click(object sender, EventArgs e)
 		{
-			SuperMemoAlgorithm(UserGradeEasy, mCurrentStudyCards[0]);
+			if (mUpdateTimes)
+				SuperMemoAlgorithm(UserGradeEasy, mCurrentStudyCards[0]);
 			LoadNextCard(true);
 		}
 
