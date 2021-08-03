@@ -20,9 +20,11 @@ namespace CardLearner
 		public const int UserGradeEasy = 5;
 
 		/// <summary>
-		/// Specifies if the next review time should be recalculated and updated (true in normal study, false in custom study)
+		/// Specifies if the custom study is active -->
+		///		review times won't be recalculated
+		///		cards won't be removed
 		/// </summary>
-		private bool mUpdateTimes = true;
+		private bool mCustomStudy = false;
 
 		/// <summary>
 		/// Specifies how far the close button is away from the right window border
@@ -190,9 +192,8 @@ namespace CardLearner
 				if (result == DialogResult.Yes)
 				{
 					// CL_TODO: Fix custom study session
-					mUpdateTimes = false;
-					foreach (Card card in deck.Cards)
-						cardsToStudy.Add(card);
+					mCustomStudy = true;
+					cardsToStudy.AddRange(deck.Cards);
 				}
 				else
 					return;
@@ -227,7 +228,7 @@ namespace CardLearner
 			btnGood.Visible = false;
 			btnEasy.Visible = false;
 			btnSolve.Text = "Solve";
-			mUpdateTimes = true;
+			mCustomStudy = false;
 		}
 
 		private void lstviewPracticeCards_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
@@ -407,7 +408,7 @@ namespace CardLearner
 				// Move card to random place
 				Card card = mCurrentStudyCards[0];
 				mCurrentStudyCards.RemoveAt(0);
-				mCurrentStudyCards.Insert(new Random().Next(0, mCurrentStudyCards.Count), card);
+				mCurrentStudyCards.Insert(new Random().Next(0, mCurrentStudyCards.Count + 1), card);
 			}
 
 			btnAgain.Visible = false;
@@ -439,16 +440,16 @@ namespace CardLearner
 
 		private void btnGood_Click(object sender, EventArgs e)
 		{
-			if (mUpdateTimes)
+			if (!mCustomStudy)
 				SuperMemoAlgorithm(UserGradeGood, mCurrentStudyCards[0]);
-			LoadNextCard(true);
+			LoadNextCard(true ? !mCustomStudy : false);
 		}
 
 		private void btnEasy_Click(object sender, EventArgs e)
 		{
-			if (mUpdateTimes)
+			if (!mCustomStudy)
 				SuperMemoAlgorithm(UserGradeEasy, mCurrentStudyCards[0]);
-			LoadNextCard(true);
+			LoadNextCard(true ? !mCustomStudy : false);
 		}
 
 		private void resetProgressToolStripMenuItem_Click(object sender, EventArgs e)
